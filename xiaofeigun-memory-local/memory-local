@@ -1,0 +1,73 @@
+#!/bin/bash
+# 小飞棍记忆搜索 CLI 包装器
+# 让 OpenClaw 可以通过 exec 调用
+# 作者：小飞棍 🪄
+
+WORKSPACE="${OPENCLAW_WORKSPACE:-$HOME/.openclaw/workspace}"
+SERVER_URL="${MEMORY_SERVER_URL:-http://127.0.0.1:8787}"
+
+# 检查服务是否运行
+check_server() {
+    if ! curl -s "$SERVER_URL/health" > /dev/null 2>&1; then
+        echo "❌ 记忆搜索服务未启动"
+        echo "请先运行: python3 $(dirname $0)/memory_server.py"
+        exit 1
+    fi
+}
+
+# 搜索记忆
+search() {
+    check_server
+    local query="$1"
+    local top_k="${2:-5}"
+    
+    # URL 编码
+    query=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$query'))")
+    
+    curl -s "$SERVER_URL/search?q=$query&top_k=$top_k" | python3 -m json.tool
+}
+
+# 更新索引
+update() {
+    check_server
+    curl -s -X POST "$SERVER_URL/update" \
+        -H "Content-Type: application/json" \
+        -d '{"incremental": true}' | python3 -m json.tool
+}
+
+# 显示统计
+stats() {
+    check_server
+    curl -s "$SERVER_URL/stats" | python3 -m json.tool
+}
+
+# 主入口
+case "$1" in
+    search)
+        search "$2" "$3"
+        ;;
+    update)
+        update
+        ;;
+    stats)
+        stats
+        ;;
+    *)
+        echo "🪄 xiaofeigun-memory-local"
+        echo ""
+        echo "用法: memory-local <command> [args]"
+        echo ""
+        echo "命令:"
+        echo "  search <query> [top_k]  - 搜索记忆"
+        echo "  update                  - 更新索引"
+        echo "  stats                   - 显示统计"
+        echo ""
+        echo "环境变量:"
+        echo "  OPENCLAW_WORKSPACE      - 工作目录 (默认: ~/.openclaw/workspace)"
+        echo "  MEMORY_SERVER_URL       - 服务地址 (默认: http://127.0.0.1:8787)"
+        echo ""
+        echo "示例:"
+        echo "  memory-local search '小蝎子' 3"
+        exit 1
+        ;;
+esac

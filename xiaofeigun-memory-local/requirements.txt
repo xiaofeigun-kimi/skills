@@ -1,0 +1,8 @@
+# xiaofeigun-memory-local
+
+纯 Python 标准库实现，无额外依赖。
+
+如需安装依赖（通常不需要）：
+```bash
+pip install -r requirements.txt
+```
